@@ -44,6 +44,11 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     npvs[vrow , vcol] = 2
     #-- write this to disk
 
+    # add viewpoints
+    for point in viewpoints:
+        vrow, vcol = d.index(point[0], point[1])
+        npvs[vrow , vcol] = 2
+
     with rasterio.open(output_file, 'w', 
                        driver='GTiff', 
                        height=npi.shape[0],
