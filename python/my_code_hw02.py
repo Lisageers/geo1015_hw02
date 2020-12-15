@@ -32,7 +32,7 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
 
     #-- numpy of input
     npi  = d.read(1)
-    
+    print(npi.shape)
     #-- the results of the viewshed in npvs, all values=3
     npvs = numpy.zeros(d.shape, dtype=numpy.int8)
     npvs = npvs + 3
@@ -49,47 +49,39 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
                 if math.sqrt((cor[0] - vpoint[0]) ** 2 + (cor[1] - vpoint[1]) ** 2) <= maxdistance:
                     npvs[row , column] = 0
     
+    vrow, vcol = d.index(viewpoints[0][0], viewpoints[0][1])
+
+    range_indices = numpy.argwhere(npvs == 0)
+    for i in range_indices:
+        line = bresenham_line(d, viewpoints[0], (i[0], i[1]))
+        line_indices = numpy.argwhere(line == 1)
+        if i[0] < vrow:
+            line_indices = line_indices[::-1]
+        tan = 0
+        # loop through indices
+        for index in line_indices:
+            # get z, coordinates and distance of index
+            z = npi[index[0], index[1]]
+            cor = d.xy(index[0], index[1])
+            distance = math.sqrt((cor[0] - viewpoints[0][0]) ** 2 + (cor[1] - viewpoints[0][1]) ** 2)
+            # calculate z difference
+            z_diff = z - (viewpoints[0][2] + npi[vrow, vcol])
+            
+            # pixel not visible if angle is smaller 
+            if math.atan(z_diff/distance) < tan:
+                npvs[index[0] , index[1]] = 0
+            else:
+                # pixel visible if tan is larger and update tan
+                tan = math.atan(z_diff/distance)
+                npvs[index[0] , index[1]] = 1
+    
+    
     # add viewpoints
     for point in viewpoints:
         # get indexes
         vrow, vcol = d.index(point[0], point[1])
         # set value
         npvs[vrow , vcol] = 2
-
-    # maak test lijn voor eerste viewpoint en 0,0
-    line = bresenham_line(d, viewpoints[0], (0, 0))
-    # get indices where pixel touches line and turn around for right order
-    indices = numpy.argwhere(line == 1)
-    indices = indices[::-1]
-
-    tan = 0
-    # loop through indices
-    for index in indices:
-        # continue
-        # get z, coordinates and distance of index
-        z = npi[index[0], index[1]]
-        cor = d.xy(index[0], index[1])
-        distance = math.sqrt((cor[0] - viewpoints[0][0]) ** 2 + (cor[1] - viewpoints[0][1]) ** 2)
-        # calculate z difference
-        z_diff = z - viewpoints[0][2]
-        # pixel not visible if angle is smaller 
-        if math.atan(z_diff/distance) < tan:
-            npvs[index[0] , index[1]] = 0
-        else:
-            # pixel visible if tan is larger and update tan
-            tan = math.atan(z_diff/distance)
-            npvs[index[0] , index[1]] = 1
-
-    # dit is een test tif om te kijken hoe de lijn er uit zag
-    # with rasterio.open(
-    #         'test.tif', 'w',
-    #         driver='GTiff',
-    #         dtype=rasterio.uint8,
-    #         count=1,
-    #         width=line.shape[1],
-    #         height=line.shape[0]) as dst:
-    #     dst.write(line, indexes=1)
-
 
     #-- write this to disk
     with rasterio.open(output_file, 'w', 
