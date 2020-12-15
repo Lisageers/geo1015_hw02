@@ -29,26 +29,36 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
         none (but output GeoTIFF file written to 'output-file')
     """  
     
-    # [this code can and should be removed/modified/reutilised]
-    # [it's just there to help you]
 
     #-- numpy of input
     npi  = d.read(1)
-    #-- fetch the 1st viewpoint
-    v = viewpoints[0]
-    #-- index of this point in the numpy raster
-    vrow, vcol = d.index(v[0], v[1])
-    #-- the results of the viewshed in npvs, all values=0
+    
+    #-- the results of the viewshed in npvs, all values=3
     npvs = numpy.zeros(d.shape, dtype=numpy.int8)
-    #-- put that pixel with value 2
-    npvs[vrow , vcol] = 2
-    #-- write this to disk
+    npvs = npvs + 3
 
+    # loop through grid
+    for row in range(len(npvs)):
+        for column in range(len(npvs[0])):
+            # get coordinates of the pixel
+            cor = d.xy(row, column)
+            
+            # loop through viewpoints
+            for vpoint in viewpoints:
+                # check if pixel is in range
+                if math.sqrt((cor[0] - vpoint[0]) ** 2 + (cor[1] - vpoint[1]) ** 2) <= maxdistance:
+                    npvs[row , column] = 0
+    
     # add viewpoints
     for point in viewpoints:
+        # get indexes
         vrow, vcol = d.index(point[0], point[1])
+        # set value
         npvs[vrow , vcol] = 2
 
+
+
+    #-- write this to disk
     with rasterio.open(output_file, 'w', 
                        driver='GTiff', 
                        height=npi.shape[0],
