@@ -56,6 +56,39 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
         # set value
         npvs[vrow , vcol] = 2
 
+    # maak test lijn voor eerste viewpoint en 0,0
+    line = bresenham_line(d, viewpoints[0], (0, 0))
+    # get indices where pixel touches line and turn around for right order
+    indices = numpy.argwhere(line == 1)
+    indices = indices[::-1]
+
+    tan = 0
+    # loop through indices
+    for index in indices:
+        # continue
+        # get z, coordinates and distance of index
+        z = npi[index[0], index[1]]
+        cor = d.xy(index[0], index[1])
+        distance = math.sqrt((cor[0] - viewpoints[0][0]) ** 2 + (cor[1] - viewpoints[0][1]) ** 2)
+        # calculate z difference
+        z_diff = z - viewpoints[0][2]
+        # pixel not visible if angle is smaller 
+        if math.atan(z_diff/distance) < tan:
+            npvs[index[0] , index[1]] = 0
+        else:
+            # pixel visible if tan is larger and update tan
+            tan = math.atan(z_diff/distance)
+            npvs[index[0] , index[1]] = 1
+
+    # dit is een test tif om te kijken hoe de lijn er uit zag
+    # with rasterio.open(
+    #         'test.tif', 'w',
+    #         driver='GTiff',
+    #         dtype=rasterio.uint8,
+    #         count=1,
+    #         width=line.shape[1],
+    #         height=line.shape[0]) as dst:
+    #     dst.write(line, indexes=1)
 
 
     #-- write this to disk
@@ -73,22 +106,23 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
 
 
 
-# def Bresenham_with_rasterio():
-#     # d = rasterio dataset as above
-#     a = (10, 10)
-#     b = (100, 50)
-#     #-- create in-memory a simple GeoJSON LineString
-#     v = {}
-#     v["type"] = "LineString"
-#     v["coordinates"] = []
-#     v["coordinates"].append(d.xy(a[0], a[1]))
-#     v["coordinates"].append(d.xy(b[0], b[1]))
-#     shapes = [(v, 1)]
-#     re = features.rasterize(shapes, 
-#                             out_shape=d.shape, 
-#                             # all_touched=True,
-#                             transform=d.transform)
-#     # re is a numpy with d.shape where the line is rasterised (values != 0)
+def bresenham_line(d, vp, q):
+    # d = rasterio dataset as above
+    # a = (10, 10)
+    # b = (100, 50)
+    #-- create in-memory a simple GeoJSON LineString
+    v = {}
+    v["type"] = "LineString"
+    v["coordinates"] = []
+    v["coordinates"].append((vp[0], vp[1]))
+    v["coordinates"].append(d.xy(q[0], q[1]))
+    shapes = [(v, 1)]
+    re = features.rasterize(shapes, 
+                            out_shape=d.shape, 
+                            # all_touched=True,
+                            transform=d.transform)
+    return re
+    # re is a numpy with d.shape where the line is rasterised (values != 0)
 
 
 
